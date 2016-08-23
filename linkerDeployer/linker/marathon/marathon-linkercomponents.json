@@ -6,10 +6,11 @@
       "apps": [
         {
           "id": "clustermgmt",
-          "cmd": "sleep 60s && /usr/local/bin/entrypoint.sh",
+          "cmd": "sleep 60s && /linker/entrypoint.sh",
           "instances": 1,
           "cpus": 0.1,
           "mem": 512,
+          "acceptedResourceRoles":["slave_public"],
           "dependencies": [
             "/linkerdcos/cluster/mongodb"
           ],
@@ -52,10 +53,11 @@
         },
         {
           "id": "usermgmt",
-          "cmd": "sleep 60s && /usr/local/bin/entrypoint.sh",
+          "cmd": "sleep 60s && /linker/entrypoint.sh",
           "instances": 1,
           "cpus": 0.1,
           "mem": 512,
+          "acceptedResourceRoles":["slave_public"],
           "dependencies": [
             "/linkerdcos/cluster/mongodb"
           ],
@@ -101,6 +103,7 @@
           "cpus": 0.1,
           "mem": 512,
           "instances": 3,
+          "acceptedResourceRoles":["slave_public"],
           "container": {
             "type": "DOCKER",
             "docker": {
@@ -141,6 +144,7 @@
           "cpus": 0.1,
           "mem": 256,
           "instances": 1,
+          "acceptedResourceRoles":["slave_public"],
           "labels": {
             "HAPROXY_GROUP": "linkermgmt"
           },
@@ -180,6 +184,7 @@
           "cpus": 0.1,
           "mem": 256,
           "instances": 1,
+          "acceptedResourceRoles":["slave_public"],
           "labels": {
             "HAPROXY_GROUP": "linkermgmt"
           },
@@ -227,6 +232,7 @@
           "cpus": 0.1,
           "mem": 512,
           "instances": 1,
+          "acceptedResourceRoles":["slave_public"],
           "labels": {
             "HAPROXY_GROUP": "linkermgmt"
           },

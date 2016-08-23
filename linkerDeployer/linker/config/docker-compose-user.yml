@@ -1,15 +1,17 @@
 version: '2'
 services:
-  zookeeper:
-    image: linkerrepository/zookeeper:1.0.1
+  exhibitor:
+    image: linkerrepository/linker_exhibitor:1.5.6
     network_mode: host
-    command: /init.sh
     env_file: .env
+    volumes:
+     - /opt/zookeeper/snapshot:/opt/zookeeper/snapshot
+     - /opt/zookeeper/transactions:/opt/zookeeper/transactions
     privileged: true
     restart: always
     environment:
      - "constraint:master==true"
-     - "affinity:container!=*zookeeper*"
+     - "affinity:container!=*exhibitor*"
 
   mesosmaster:
     image: linkerrepository/mesos-master:0.28.1
@@ -19,7 +21,7 @@ services:
     volumes:
      - /var/lib/mesos:/var/lib/mesos
     depends_on:
-     - zookeeper
+     - exhibitor
     privileged: true
     restart: always
     environment:
@@ -37,12 +39,13 @@ services:
     command: /entrypoint.sh
     env_file: .env
     depends_on:
-     - zookeeper
+     - exhibitor
     privileged: true
     restart: always
     environment:
      - MARATHON_TASK_LAUNCH_TIMEOUT=900000
      - MARATHON_EVENT_SUBSCRIBER=http_callback
+     - MARATHON_MESOS_ROLE=slave_public
      - "constraint:master==true"
      - "affinity:container!=*marathon*"
 
@@ -61,7 +64,7 @@ services:
     command: /entrypoint.sh
     env_file: .env
     depends_on:
-     - zookeeper
+     - exhibitor
     privileged: true
     restart: always
     environment:
@@ -94,7 +97,7 @@ services:
     network_mode: host
     env_file: .env
     depends_on:
-     - zookeeper
+     - exhibitor
     privileged: true
     restart: always
     environment:
@@ -116,7 +119,7 @@ services:
 
 
   prometheus:
-    image: prom/prometheus:0.17.0
+    image: prom/prometheus:v1.0.0
     network_mode: host
     entrypoint: /bin/prometheus
     command: -alertmanager.url=http://localhost:9093 -config.file=/etc/prometheus/prometheus.yml
@@ -130,7 +133,7 @@ services:
      - "affinity:container!=*prometheus*"
 
   alertmanager:
-    image: prom/alertmanager:stable
+    image: prom/alertmanager:v0.3.0
     network_mode: host
     volumes:
     - /linker/alertmanager:/etc/alertmanager
@@ -157,16 +160,18 @@ services:
     image: linkerrepository/linkerdcos_client:latest
     network_mode: host
     volumes:
-    - /linker/docker:/linker/docker
-    - /var/log:/var/log
+     - /etc/resolv.conf:/etc/resolv.conf
+     - /linker/docker:/linker/docker
+     - /var/log:/var/log
+     - /root/.docker:/root/.docker:ro
     env_file: .env
     privileged: true
     restart: always
     depends_on:
      - mongodb
      - dnsserver
-    entrypoint: /usr/local/bin/dbcheck.sh
-    command: /usr/local/bin/entrypoint.sh
+    entrypoint: /linker/dbcheck.sh
+    command: /linker/entrypoint.sh
     environment:
      - "constraint:master==true"
      - "constraint:dcosclient==true"
@@ -175,7 +180,7 @@ services:
   genresolvconf:
     image: linkerrepository/linker_resolver:1.0.0
     volumes:
-    - /etc/resolv.conf:/etc/resolv.conf
+     - /etc/resolv.conf:/etc/resolv.conf
     network_mode: host
     env_file: .env
     depends_on:
@@ -188,12 +193,12 @@ services:
   cadvisormonitor:
     image: linkerrepository/linker_cadvisor:1.0.0
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock:rw
-    - /:/rootfs:ro
-    - /sys:/sys:ro
-    - /var/lib/mesos/slave:/tmp/mesos:ro
-    - /var/run:/var/run:rw
-    - /var/lib/docker:/var/lib/docker:ro
+     - /var/run/docker.sock:/var/run/docker.sock:rw
+     - /:/rootfs:ro
+     - /sys:/sys:ro
+     - /var/lib/mesos/slave:/tmp/mesos:ro
+     - /var/run:/var/run:rw
+     - /var/lib/docker:/var/lib/docker:ro
     network_mode: host
     env_file: .env
     privileged: true
@@ -201,3 +206,16 @@ services:
     environment:
       - "constraint:slave==true"
       - "affinity:container!=*cadvisormonitor*"
+
+  webconsole:
+    image: linkerrepository/linker_webconsole:latest
+    volumes:
+     - /linker/docker/${CLUSTER_OWNER}/${CLUSTER_NAME}/certs:/usr/local/bin/certs:ro
+    network_mode: host
+    env_file: .env
+    privileged: true
+    restart: always
+    command: /usr/local/bin/entrypoint.sh
+    environment:
+     - "constraint:master==true"
+     - "affinity:container!=*webconsole*"
